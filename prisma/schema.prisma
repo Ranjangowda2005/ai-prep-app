@@ -1,0 +1,46 @@
+// This tells Prisma to use PostgreSQL as the database
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Connection URL is configured in prisma.config.ts for Migrate
+}
+
+// USER TABLE — stores everyone who signs up
+model User {
+  id           String         @id @default(cuid()) // Unique ID for each user
+  clerkId      String         @unique              // Clerk's ID for this user
+  email        String         @unique              // Their email address
+  name         String?                             // Their name (? means optional)
+  plan         String         @default("free")     // "free" or "pro"
+  usageCount   Int            @default(0)          // How many reviews this month
+  createdAt    DateTime       @default(now())      // When they joined
+  reviews      Review[]                            // One user has many reviews
+  subscription Subscription?                       // One user has one subscription
+}
+
+// REVIEW TABLE — stores every code review done
+model Review {
+  id         String   @id @default(cuid())
+  userId     String                          // Which user did this review
+  user       User     @relation(fields: [userId], references: [id])
+  language   String                          // e.g. "JavaScript", "Python"
+  code       String                          // The code they submitted
+  feedback   String                          // The AI's feedback
+  score      Int      @default(0)            // AI quality score out of 100
+  createdAt  DateTime @default(now())
+}
+
+// SUBSCRIPTION TABLE — stores Stripe payment info
+model Subscription {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id])
+  stripeCustomerId String    @unique
+  stripePriceId    String
+  status           String    // "active", "canceled", "past_due"
+  currentPeriodEnd DateTime
+  createdAt        DateTime  @default(now())
+}
